@@ -107,18 +107,16 @@ public class AtomicBoolean implements java.io.Serializable {
     }
 
     /**
-     * Unconditionally sets to the given value.
-     *
-     * @param newValue the new value
+     * 无条件地/直接地设置value值.
      */
     public final void set(boolean newValue) {
         value = newValue ? 1 : 0;
     }
 
     /**
-     * Eventually sets to the given value.
+     * 最终将value设置为newValue. 不保证其他线程立即可见.
+     * putOrderedXXX方法是putXXXVolatile方法的延迟实现，不保证值的改变被其他线程立即看到
      *
-     * @param newValue the new value
      * @since 1.6
      */
     public final void lazySet(boolean newValue) {
@@ -127,10 +125,7 @@ public class AtomicBoolean implements java.io.Serializable {
     }
 
     /**
-     * Atomically sets to the given value and returns the previous value.
-     *
-     * @param newValue the new value
-     * @return the previous value
+     * cas地进行自增. 并返回自增前的值.
      */
     public final boolean getAndSet(boolean newValue) {
         boolean prev;
@@ -141,9 +136,7 @@ public class AtomicBoolean implements java.io.Serializable {
     }
 
     /**
-     * Returns the String representation of the current value.
-     *
-     * @return the String representation of the current value
+     * 返回布尔变量的字符串形式.
      */
     public String toString() {
         return Boolean.toString(get());

@@ -54,11 +54,7 @@ package java.lang;
  */
 public abstract class Number implements java.io.Serializable {
     /**
-     * Returns the value of the specified number as an {@code int},
-     * which may involve rounding or truncation.
-     *
-     * @return  the numeric value represented by this object after conversion
-     *          to type {@code int}.
+     * 返回值的int形式
      */
     public abstract int intValue();
 
