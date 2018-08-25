@@ -34,66 +34,62 @@
  */
 
 package java.util.concurrent.atomic;
+
 import sun.misc.Unsafe;
 
 /**
- * A {@code boolean} value that may be updated atomically. See the
- * {@link java.util.concurrent.atomic} package specification for
- * description of the properties of atomic variables. An
- * {@code AtomicBoolean} is used in applications such as atomically
- * updated flags, and cannot be used as a replacement for a
- * {@link java.lang.Boolean}.
- *
- * @since 1.5
  * @author Doug Lea
+ * @since 1.5
  */
 public class AtomicBoolean implements java.io.Serializable {
     private static final long serialVersionUID = 4654671469794556979L;
-    // setup to use Unsafe.compareAndSwapInt for updates
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+
+    // 类中value字段的偏移量
     private static final long valueOffset;
 
     static {
         try {
-            valueOffset = unsafe.objectFieldOffset
-                (AtomicBoolean.class.getDeclaredField("value"));
-        } catch (Exception ex) { throw new Error(ex); }
+            valueOffset = unsafe.objectFieldOffset(AtomicBoolean.class.getDeclaredField("value"));
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
     }
 
+    // 实例中value值.
     private volatile int value;
 
     /**
-     * Creates a new {@code AtomicBoolean} with the given initial value.
-     *
-     * @param initialValue the initial value
+     * 根据传入的布尔型参数来进行初始化.
+     * true 对应着 value = 1
+     * false 对应着 value = 2
      */
     public AtomicBoolean(boolean initialValue) {
         value = initialValue ? 1 : 0;
     }
 
     /**
-     * Creates a new {@code AtomicBoolean} with initial value {@code false}.
+     * 不进行任何操作. 那么value就是默认值0, 对应着false
      */
     public AtomicBoolean() {
     }
 
     /**
-     * Returns the current value.
-     *
-     * @return the current value
+     * 返回当前实例的值.
+     * value = 0 对应着 false
+     * value = 1 对应着 true
      */
     public final boolean get() {
         return value != 0;
     }
 
     /**
-     * Atomically sets the value to the given updated value
-     * if the current value {@code ==} the expected value.
+     * 如果原子操作时当前value等于`预期值`expect, 那么就会cas成功.
+     * 如果cas成功. 那么value就会更新为update`更新值`.
      *
-     * @param expect the expected value
-     * @param update the new value
-     * @return {@code true} if successful. False return indicates that
-     * the actual value was not equal to the expected value.
+     * @param expect `预期值`.
+     * @param update `更新值`.
+     * @return 当cas成功的时候返回{@code true} . cas操作时的value值不等于expect值的时候, 返回False
      */
     public final boolean compareAndSet(boolean expect, boolean update) {
         int e = expect ? 1 : 0;
@@ -102,16 +98,7 @@ public class AtomicBoolean implements java.io.Serializable {
     }
 
     /**
-     * Atomically sets the value to the given updated value
-     * if the current value {@code ==} the expected value.
-     *
-     * <p><a href="package-summary.html#weakCompareAndSet">May fail
-     * spuriously and does not provide ordering guarantees</a>, so is
-     * only rarely an appropriate alternative to {@code compareAndSet}.
-     *
-     * @param expect the expected value
-     * @param update the new value
-     * @return {@code true} if successful
+     * 跟上面没啥区别啊???
      */
     public boolean weakCompareAndSet(boolean expect, boolean update) {
         int e = expect ? 1 : 0;
@@ -155,6 +142,7 @@ public class AtomicBoolean implements java.io.Serializable {
 
     /**
      * Returns the String representation of the current value.
+     *
      * @return the String representation of the current value
      */
     public String toString() {
