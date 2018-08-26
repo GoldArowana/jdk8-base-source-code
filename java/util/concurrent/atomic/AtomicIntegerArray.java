@@ -34,93 +34,95 @@
  */
 
 package java.util.concurrent.atomic;
-import java.util.function.IntUnaryOperator;
-import java.util.function.IntBinaryOperator;
+
 import sun.misc.Unsafe;
 
+import java.util.function.IntBinaryOperator;
+import java.util.function.IntUnaryOperator;
+
 /**
- * An {@code int} array in which elements may be updated atomically.
- * See the {@link java.util.concurrent.atomic} package
- * specification for description of the properties of atomic
- * variables.
- * @since 1.5
  * @author Doug Lea
+ * @since 1.5
  */
 public class AtomicIntegerArray implements java.io.Serializable {
     private static final long serialVersionUID = 2862133569453604235L;
 
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+
+    /**
+     * 返回当前数组第一个元素地址相对于数组起始地址的偏移值
+     * MarkWord 4字节 + Class Pointer 4字节 + 数组长度4字节 + 对齐4字节 = 16 字节
+     */
     private static final int base = unsafe.arrayBaseOffset(int[].class);
+
     private static final int shift;
     private final int[] array;
 
     static {
+        // arrayIndexScale 返回当前数组一个元素占用的字节数
         int scale = unsafe.arrayIndexScale(int[].class);
-        if ((scale & (scale - 1)) != 0)
-            throw new Error("data type scale not a power of two");
+        if ((scale & (scale - 1)) != 0) throw new Error("data type scale not a power of two");
         shift = 31 - Integer.numberOfLeadingZeros(scale);
     }
 
+    /**
+     * @param i 索引(下角标)
+     * @return 返回相应的`偏移量`
+     */
     private long checkedByteOffset(int i) {
-        if (i < 0 || i >= array.length)
-            throw new IndexOutOfBoundsException("index " + i);
+        if (i < 0 || i >= array.length) throw new IndexOutOfBoundsException("index " + i);
 
         return byteOffset(i);
     }
 
+    /**
+     * @param i 索引(下角标)
+     * @return 返回相应的`偏移量`
+     */
     private static long byteOffset(int i) {
         return ((long) i << shift) + base;
     }
 
     /**
-     * Creates a new AtomicIntegerArray of the given length, with all
-     * elements initially zero.
-     *
-     * @param length the length of the array
+     * 初始化一个length大小的数组
      */
     public AtomicIntegerArray(int length) {
         array = new int[length];
     }
 
     /**
-     * Creates a new AtomicIntegerArray with the same length as, and
-     * all elements copied from, the given array.
-     *
-     * @param array the array to copy elements from
-     * @throws NullPointerException if array is null
+     * 根据给定的array进行拷贝.
+     * clone之后, 不仅数组大小相等, 而且含有相同的元素.
      */
     public AtomicIntegerArray(int[] array) {
-        // Visibility guaranteed by final field guarantees
         this.array = array.clone();
     }
 
     /**
-     * Returns the length of the array.
-     *
-     * @return the length of the array
+     * 获取数组的长度
      */
     public final int length() {
         return array.length;
     }
 
     /**
-     * Gets the current value at position {@code i}.
-     *
-     * @param i the index
-     * @return the current value
+     * 获取数组中特定索引的值.
      */
     public final int get(int i) {
         return getRaw(checkedByteOffset(i));
     }
 
+    /**
+     * 根据偏移量来获取数中具体索引(下角标)处的值.
+     */
     private int getRaw(long offset) {
         return unsafe.getIntVolatile(array, offset);
     }
 
     /**
-     * Sets the element at position {@code i} to the given value.
+     * 原子地更新.
      *
-     * @param i the index
+     * @param i        the index        索引(下角标)
      * @param newValue the new value
      */
     public final void set(int i, int newValue) {
@@ -128,10 +130,11 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Eventually sets the element at position {@code i} to the given value.
+     * 最终将数组索引i处的value设置为newValue. 不保证其他线程立即可见.
+     * putOrderedXXX方法是putXXXVolatile方法的延迟实现，不保证值的改变被其他线程立即看到
      *
-     * @param i the index
-     * @param newValue the new value
+     * @param i        the index        索引(下角标)
+     * @param newValue the new value    新值
      * @since 1.6
      */
     public final void lazySet(int i, int newValue) {
@@ -139,44 +142,41 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Atomically sets the element at position {@code i} to the given
-     * value and returns the old value.
+     * 原子地设置数组`i`处的值为`newValue`
      *
-     * @param i the index
-     * @param newValue the new value
-     * @return the previous value
+     * @param i        the index            索引(下角标)
+     * @param newValue the new value        新值
+     * @return the previous value           返回之前的值
      */
     public final int getAndSet(int i, int newValue) {
         return unsafe.getAndSetInt(array, checkedByteOffset(i), newValue);
     }
 
     /**
-     * Atomically sets the element at position {@code i} to the given
-     * updated value if the current value {@code ==} the expected value.
+     * cas更改数组中的某一索引处的值
      *
-     * @param i the index
-     * @param expect the expected value
-     * @param update the new value
-     * @return {@code true} if successful. False return indicates that
-     * the actual value was not equal to the expected value.
+     * @param i      the index              索引(下角标)
+     * @param expect the expected value     cas的`预期值`
+     * @param update the new value          cas的`更新值`
+     * @return cas成功就返回true. 当预期值不等于value的当前值的时候, 就会cas失败, 返回false.
      */
     public final boolean compareAndSet(int i, int expect, int update) {
         return compareAndSetRaw(checkedByteOffset(i), expect, update);
     }
 
+    /**
+     * @param offset 偏移量
+     * @param expect 预期值
+     * @param update 更新值
+     * @return
+     */
     private boolean compareAndSetRaw(long offset, int expect, int update) {
         return unsafe.compareAndSwapInt(array, offset, expect, update);
     }
 
     /**
-     * Atomically sets the element at position {@code i} to the given
-     * updated value if the current value {@code ==} the expected value.
+     * 其实就是compareAndSet方法
      *
-     * <p><a href="package-summary.html#weakCompareAndSet">May fail
-     * spuriously and does not provide ordering guarantees</a>, so is
-     * only rarely an appropriate alternative to {@code compareAndSet}.
-     *
-     * @param i the index
      * @param expect the expected value
      * @param update the new value
      * @return {@code true} if successful
@@ -186,29 +186,29 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Atomically increments by one the element at index {@code i}.
+     * 原子地自增
      *
-     * @param i the index
-     * @return the previous value
+     * @param i the index           索引(下角标)
+     * @return the previous value   返回自增之前的值
      */
     public final int getAndIncrement(int i) {
         return getAndAdd(i, 1);
     }
 
     /**
-     * Atomically decrements by one the element at index {@code i}.
+     * 原子地自减
      *
      * @param i the index
-     * @return the previous value
+     * @return the previous value   返回自减之前的值
      */
     public final int getAndDecrement(int i) {
         return getAndAdd(i, -1);
     }
 
     /**
-     * Atomically adds the given value to the element at index {@code i}.
+     * 将索引i处的值设置为 value(旧值) + delta
      *
-     * @param i the index
+     * @param i     the index
      * @param delta the value to add
      * @return the previous value
      */
@@ -217,29 +217,29 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Atomically increments by one the element at index {@code i}.
+     * 原子地自增
      *
-     * @param i the index
-     * @return the updated value
+     * @param i the index           索引(下角标)
+     * @return the updated value    返回自增之前的值
      */
     public final int incrementAndGet(int i) {
         return getAndAdd(i, 1) + 1;
     }
 
     /**
-     * Atomically decrements by one the element at index {@code i}.
+     * 原子地自减.
      *
-     * @param i the index
-     * @return the updated value
+     * @param i the index           索引(下角标)
+     * @return the updated value    返回自增之后的值
      */
     public final int decrementAndGet(int i) {
         return getAndAdd(i, -1) - 1;
     }
 
     /**
-     * Atomically adds the given value to the element at index {@code i}.
+     * 原子地将索引i处的值设置为 value(旧值) + delta
      *
-     * @param i the index
+     * @param i     the index
      * @param delta the value to add
      * @return the updated value
      */
@@ -249,14 +249,11 @@ public class AtomicIntegerArray implements java.io.Serializable {
 
 
     /**
-     * Atomically updates the element at index {@code i} with the results
-     * of applying the given function, returning the previous value. The
-     * function should be side-effect-free, since it may be re-applied
-     * when attempted updates fail due to contention among threads.
+     * 函数式编程, 原子地更新
      *
-     * @param i the index
+     * @param i              the index      索引(下角标)
      * @param updateFunction a side-effect-free function
-     * @return the previous value
+     * @return the updated value            返回更新前的值
      * @since 1.8
      */
     public final int getAndUpdate(int i, IntUnaryOperator updateFunction) {
@@ -270,14 +267,11 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Atomically updates the element at index {@code i} with the results
-     * of applying the given function, returning the updated value. The
-     * function should be side-effect-free, since it may be re-applied
-     * when attempted updates fail due to contention among threads.
+     * 函数式编程, 原子地更新
      *
-     * @param i the index
+     * @param i              the index      索引(下角标)
      * @param updateFunction a side-effect-free function
-     * @return the updated value
+     * @return the updated value            返回更新后的值
      * @since 1.8
      */
     public final int updateAndGet(int i, IntUnaryOperator updateFunction) {
@@ -291,22 +285,15 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Atomically updates the element at index {@code i} with the
-     * results of applying the given function to the current and
-     * given values, returning the previous value. The function should
-     * be side-effect-free, since it may be re-applied when attempted
-     * updates fail due to contention among threads.  The function is
-     * applied with the current value at index {@code i} as its first
-     * argument, and the given update as the second argument.
+     * 函数式编程
      *
-     * @param i the index
-     * @param x the update value
+     * @param i                   the index         索引(数组下角标)
+     * @param x                   the update value  将索引位置的值更新为x
      * @param accumulatorFunction a side-effect-free function of two arguments
-     * @return the previous value
+     * @return the updated value    返回更新之前的值
      * @since 1.8
      */
-    public final int getAndAccumulate(int i, int x,
-                                      IntBinaryOperator accumulatorFunction) {
+    public final int getAndAccumulate(int i, int x, IntBinaryOperator accumulatorFunction) {
         long offset = checkedByteOffset(i);
         int prev, next;
         do {
@@ -325,14 +312,13 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * applied with the current value at index {@code i} as its first
      * argument, and the given update as the second argument.
      *
-     * @param i the index
-     * @param x the update value
+     * @param i                   the index         索引(数组下角标)
+     * @param x                   the update value  将索引位置的值更新为x
      * @param accumulatorFunction a side-effect-free function of two arguments
-     * @return the updated value
+     * @return the updated value    返回更新之后的值
      * @since 1.8
      */
-    public final int accumulateAndGet(int i, int x,
-                                      IntBinaryOperator accumulatorFunction) {
+    public final int accumulateAndGet(int i, int x, IntBinaryOperator accumulatorFunction) {
         long offset = checkedByteOffset(i);
         int prev, next;
         do {
@@ -343,8 +329,7 @@ public class AtomicIntegerArray implements java.io.Serializable {
     }
 
     /**
-     * Returns the String representation of the current values of array.
-     * @return the String representation of the current values of array
+     * String形式
      */
     public String toString() {
         int iMax = array.length - 1;

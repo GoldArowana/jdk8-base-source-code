@@ -34,68 +34,70 @@
  */
 
 package java.util.concurrent.atomic;
-import java.util.function.UnaryOperator;
-import java.util.function.BinaryOperator;
+
 import sun.misc.Unsafe;
 
+import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
+
 /**
- * An object reference that may be updated atomically. See the {@link
- * java.util.concurrent.atomic} package specification for description
- * of the properties of atomic variables.
- * @since 1.5
  * @author Doug Lea
- * @param <V> The type of object referred to by this reference
+ * @since 1.5
  */
 public class AtomicReference<V> implements java.io.Serializable {
     private static final long serialVersionUID = -1848883965231344442L;
 
     private static final Unsafe unsafe = Unsafe.getUnsafe();
+
+    /**
+     * 偏移量
+     */
     private static final long valueOffset;
 
     static {
         try {
-            valueOffset = unsafe.objectFieldOffset
-                (AtomicReference.class.getDeclaredField("value"));
-        } catch (Exception ex) { throw new Error(ex); }
+            valueOffset = unsafe.objectFieldOffset(AtomicReference.class.getDeclaredField("value"));
+        } catch (Exception ex) {
+            throw new Error(ex);
+        }
     }
 
+    /**
+     * 需要cas操作的对象
+     */
     private volatile V value;
 
     /**
-     * Creates a new AtomicReference with the given initial value.
-     *
-     * @param initialValue the initial value
+     * 初始化
      */
     public AtomicReference(V initialValue) {
         value = initialValue;
     }
 
     /**
-     * Creates a new AtomicReference with null initial value.
+     * 默认是null
      */
     public AtomicReference() {
     }
 
     /**
-     * Gets the current value.
-     *
-     * @return the current value
+     * 获取当前的value对象
      */
     public final V get() {
         return value;
     }
 
     /**
-     * Sets to the given value.
-     *
-     * @param newValue the new value
+     * 直接改变value值.
+     * 不是原子操作.
      */
     public final void set(V newValue) {
         value = newValue;
     }
 
     /**
-     * Eventually sets to the given value.
+     * 最终将value设置为newValue. 不保证其他线程立即可见.
+     * putOrderedXXX方法是putXXXVolatile方法的延迟实现，不保证值的改变被其他线程立即看到
      *
      * @param newValue the new value
      * @since 1.6
@@ -105,52 +107,36 @@ public class AtomicReference<V> implements java.io.Serializable {
     }
 
     /**
-     * Atomically sets the value to the given updated value
-     * if the current value {@code ==} the expected value.
-     * @param expect the expected value
-     * @param update the new value
-     * @return {@code true} if successful. False return indicates that
-     * the actual value was not equal to the expected value.
+     * 如果原子操作时当前value等于`预期值`expect, 那么就会cas成功.
+     * 如果cas成功. 那么value就会更新为update`更新值`.
+     *
+     * @param expect `预期值`.
+     * @param update `更新值`.
+     * @return 当cas成功的时候返回{@code true} . cas操作时的value值不等于expect值的时候, 返回False
      */
     public final boolean compareAndSet(V expect, V update) {
         return unsafe.compareAndSwapObject(this, valueOffset, expect, update);
     }
 
     /**
-     * Atomically sets the value to the given updated value
-     * if the current value {@code ==} the expected value.
-     *
-     * <p><a href="package-summary.html#weakCompareAndSet">May fail
-     * spuriously and does not provide ordering guarantees</a>, so is
-     * only rarely an appropriate alternative to {@code compareAndSet}.
-     *
-     * @param expect the expected value
-     * @param update the new value
-     * @return {@code true} if successful
+     * 跟上面没啥区别啊???
      */
     public final boolean weakCompareAndSet(V expect, V update) {
         return unsafe.compareAndSwapObject(this, valueOffset, expect, update);
     }
 
     /**
-     * Atomically sets to the given value and returns the old value.
-     *
-     * @param newValue the new value
-     * @return the previous value
+     * cas地进行设置. 并返回设置前的值.
      */
     @SuppressWarnings("unchecked")
     public final V getAndSet(V newValue) {
-        return (V)unsafe.getAndSetObject(this, valueOffset, newValue);
+        return (V) unsafe.getAndSetObject(this, valueOffset, newValue);
     }
 
     /**
-     * Atomically updates the current value with the results of
-     * applying the given function, returning the previous value. The
-     * function should be side-effect-free, since it may be re-applied
-     * when attempted updates fail due to contention among threads.
+     * 函数式编程. 原子地更改(更新)value的值.
      *
-     * @param updateFunction a side-effect-free function
-     * @return the previous value
+     * @return 返回更新之前的值
      * @since 1.8
      */
     public final V getAndUpdate(UnaryOperator<V> updateFunction) {
@@ -163,13 +149,9 @@ public class AtomicReference<V> implements java.io.Serializable {
     }
 
     /**
-     * Atomically updates the current value with the results of
-     * applying the given function, returning the updated value. The
-     * function should be side-effect-free, since it may be re-applied
-     * when attempted updates fail due to contention among threads.
+     * 函数式编程. 原子地更改(更新)value的值.
      *
-     * @param updateFunction a side-effect-free function
-     * @return the updated value
+     * @return 返回更新之后的值
      * @since 1.8
      */
     public final V updateAndGet(UnaryOperator<V> updateFunction) {
@@ -182,21 +164,14 @@ public class AtomicReference<V> implements java.io.Serializable {
     }
 
     /**
-     * Atomically updates the current value with the results of
-     * applying the given function to the current and given values,
-     * returning the previous value. The function should be
-     * side-effect-free, since it may be re-applied when attempted
-     * updates fail due to contention among threads.  The function
-     * is applied with the current value as its first argument,
-     * and the given update as the second argument.
+     * 两参数的函数式方法.
      *
-     * @param x the update value
+     * @param x                   the update value
      * @param accumulatorFunction a side-effect-free function of two arguments
      * @return the previous value
      * @since 1.8
      */
-    public final V getAndAccumulate(V x,
-                                    BinaryOperator<V> accumulatorFunction) {
+    public final V getAndAccumulate(V x, BinaryOperator<V> accumulatorFunction) {
         V prev, next;
         do {
             prev = get();
@@ -214,13 +189,12 @@ public class AtomicReference<V> implements java.io.Serializable {
      * is applied with the current value as its first argument,
      * and the given update as the second argument.
      *
-     * @param x the update value
+     * @param x                   the update value
      * @param accumulatorFunction a side-effect-free function of two arguments
      * @return the updated value
      * @since 1.8
      */
-    public final V accumulateAndGet(V x,
-                                    BinaryOperator<V> accumulatorFunction) {
+    public final V accumulateAndGet(V x, BinaryOperator<V> accumulatorFunction) {
         V prev, next;
         do {
             prev = get();
@@ -230,8 +204,7 @@ public class AtomicReference<V> implements java.io.Serializable {
     }
 
     /**
-     * Returns the String representation of the current value.
-     * @return the String representation of the current value
+     * 字符串形式.
      */
     public String toString() {
         return String.valueOf(get());

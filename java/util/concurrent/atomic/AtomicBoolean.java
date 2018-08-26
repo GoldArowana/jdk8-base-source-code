@@ -125,7 +125,7 @@ public class AtomicBoolean implements java.io.Serializable {
     }
 
     /**
-     * cas地进行自增. 并返回自增前的值.
+     * cas地进行设置. 并返回设置前的值.
      */
     public final boolean getAndSet(boolean newValue) {
         boolean prev;

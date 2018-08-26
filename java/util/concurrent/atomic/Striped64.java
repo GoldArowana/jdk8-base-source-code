@@ -211,8 +211,7 @@ abstract class Striped64 extends Number {
      * avoids the need for an extra field or function in LongAdder).
      * @param wasUncontended false if CAS failed before call
      */
-    final void longAccumulate(long x, LongBinaryOperator fn,
-                              boolean wasUncontended) {
+    final void longAccumulate(long x, LongBinaryOperator fn, boolean wasUncontended) {
         int h;
         if ((h = getProbe()) == 0) {
             ThreadLocalRandom.current(); // force initialization
@@ -298,8 +297,7 @@ abstract class Striped64 extends Number {
      * the low-overhead requirements of this class. So must instead be
      * maintained by copy/paste/adapt.
      */
-    final void doubleAccumulate(double x, DoubleBinaryOperator fn,
-                                boolean wasUncontended) {
+    final void doubleAccumulate(double x, DoubleBinaryOperator fn, boolean wasUncontended) {
         int h;
         if ((h = getProbe()) == 0) {
             ThreadLocalRandom.current(); // force initialization
