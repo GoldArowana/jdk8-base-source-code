@@ -39,7 +39,7 @@ import java.lang.annotation.Target;
  * property of the intended usages of objects and fields, not their
  * types or qualifiers. The effects of this annotation will nearly
  * always add significant space overhead to objects. The use of
- * {@code @Contended} is warranted only when the performance impact of
+ * {@code @Contended} is warranted only when the performance impact ofk
  * this time/space tradeoff is intrinsically worthwhile; for example,
  * in concurrent contexts in which each instance of the annotated
  * class is often accessed by a different thread.
